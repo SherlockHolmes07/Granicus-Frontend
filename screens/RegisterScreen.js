@@ -11,7 +11,7 @@ const RegisterScreen = () => {
   const [otp, setOtp] = useState("");
   const [displayOtp, setDisplayOtp] = useState(false);
 
-  const { register } = useContext(AuthContext);
+  const { register,  callOTP } = useContext(AuthContext);
 
   const handleSubmit = () => {
     // Username validation
@@ -42,6 +42,14 @@ const RegisterScreen = () => {
 
     // Display OTP field
     if (!displayOtp) {
+      console.log(mobileNumber);
+      callOTP(mobileNumber)
+      .then(() => {
+        setDisplayOtp(true);
+      })
+      .catch((error) => {
+        console.error('Error calling OTP:', error);
+      });
       setDisplayOtp(true);
       return;
     }
@@ -52,8 +60,11 @@ const RegisterScreen = () => {
       alert("Please enter a valid OTP");
       return;
     }
-
-    register(username, password, mobileNumber, email || null, otp);
+    const data = { name: username, password, mobileNumber, otp };
+    if (email) {
+      data.email = email;
+    }
+    register(data);
   };
 
   return (

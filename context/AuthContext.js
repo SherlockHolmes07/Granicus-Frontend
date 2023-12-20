@@ -28,7 +28,28 @@ export const AuthProvider = ({ children }) => {
 
 
     const callOTP = async (mobileNumber) => {
+        console.log(mobileNumber);
         // Call your API here
+        try {
+            const response = await fetch('http://192.168.29.12:3000/auth/sendOTP', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ phoneNumber: mobileNumber }),
+            });
+
+            console.log(response);
+        
+            if (!response.ok) {
+                throw new Error('HTTP status ' + response.status);
+            }
+        
+            const data = await response.json();
+            console.log('Success:', data);
+        } catch (error) {
+            console.error('Error:', error);
+        }
     }
 
     const login = async (username, password) => {
@@ -39,12 +60,34 @@ export const AuthProvider = ({ children }) => {
         await SecureStore.setItemAsync('token', token);
     };
 
-    const register = async (username, password) => {
-        // Call your API here
-        // On success, store the token in the state and secure storage
-        const token = 'your-token';
-        setToken(token);
-        await SecureStore.setItemAsync('token', token);
+    const register = async (props) => {
+        console.log("props",JSON.stringify(props));
+
+        try {
+            const response = await fetch('http://192.168.29.12:3000/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(props),
+            });
+
+            console.log(response);
+        
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('Error data:', errorData);            
+                throw new Error('HTTP status ' + response.status);
+            }
+            const data = await response.json();
+            console.log('Success:', data);
+            const token = data.token;
+            setToken(token);
+            await SecureStore.setItemAsync('token', token);
+    
+        } catch (error) {
+            console.error('Error:', error);
+        }
     };
 
     const logout = async () => {
@@ -54,7 +97,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ token, login, register, logout }}>
+        <AuthContext.Provider value={{ token, login, register, logout, callOTP }}>
             {children}
         </AuthContext.Provider>
     );
