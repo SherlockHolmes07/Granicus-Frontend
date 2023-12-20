@@ -52,12 +52,31 @@ export const AuthProvider = ({ children }) => {
         }
     }
 
-    const login = async (username, password) => {
+    const login = async (props) => {
         // Call your API here
-        // On success, store the token in the state and secure storage
-        const token = 'your-token';
-        setToken(token);
-        await SecureStore.setItemAsync('token', token);
+        try {
+            const response = await fetch('http://192.168.29.12:3000/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(props),
+            });
+            console.log(response);
+            if (!response.ok) {
+                // log detailed error
+                const errorData = await response.json();
+                console.error('Error data:', errorData);
+                throw new Error('HTTP status ' + response.status);
+            }
+            const data = await response.json();
+            console.log('Success:', data);
+            const token = data.token;
+            setToken(token);
+            await SecureStore.setItemAsync('token', token);    
+        } catch (error) {
+            console.log("error", error)
+        }
     };
 
     const register = async (props) => {
@@ -86,7 +105,7 @@ export const AuthProvider = ({ children }) => {
             await SecureStore.setItemAsync('token', token);
     
         } catch (error) {
-            console.error('Error:', error);
+            console.log('Error:', error);
         }
     };
 
@@ -94,6 +113,7 @@ export const AuthProvider = ({ children }) => {
         // Clear the token from the state and secure storage
         setToken(null);
         await SecureStore.deleteItemAsync('token');
+        
     };
 
     return (

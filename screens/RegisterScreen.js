@@ -1,9 +1,9 @@
 import React, { useState, useContext } from "react";
-import { View, TextInput, Button } from "react-native";
+import { View, TextInput, Button, TouchableOpacity, Text } from "react-native";
 import { AuthContext } from "../context/AuthContext";
 import { StyleSheet } from "react-native";
 
-const RegisterScreen = () => {
+const RegisterScreen = ({ navigation }) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
@@ -11,9 +11,11 @@ const RegisterScreen = () => {
   const [otp, setOtp] = useState("");
   const [displayOtp, setDisplayOtp] = useState(false);
 
-  const { register,  callOTP } = useContext(AuthContext);
+  const { register, callOTP } = useContext(AuthContext);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = () => {
+
+  const handleSubmit = async () => {
     // Username validation
     if (!username) {
       alert("Please enter your username");
@@ -44,16 +46,16 @@ const RegisterScreen = () => {
     if (!displayOtp) {
       console.log(mobileNumber);
       callOTP(mobileNumber)
-      .then(() => {
-        setDisplayOtp(true);
-      })
-      .catch((error) => {
-        console.error('Error calling OTP:', error);
-      });
+        .then(() => {
+          setDisplayOtp(true);
+        })
+        .catch((error) => {
+          console.error("Error calling OTP:", error);
+        });
       setDisplayOtp(true);
       return;
     }
-    
+
     // OTP validation
     const otpPattern = /^[0-9]{4}$/;
     if (!otpPattern.test(otp)) {
@@ -64,12 +66,13 @@ const RegisterScreen = () => {
     if (email) {
       data.email = email;
     }
-    register(data);
+    setIsLoading(true);
+    await register(data);
+    setIsLoading(false);
   };
 
   return (
     <View style={styles.container}>
-
       {!displayOtp && (
         <>
           <TextInput
@@ -111,7 +114,14 @@ const RegisterScreen = () => {
       <Button
         title={displayOtp ? "Submit OTP" : "Register"}
         onPress={handleSubmit}
+        disabled={isLoading}
       />
+      
+      {!displayOtp && (
+        <TouchableOpacity onPress={() => navigation.replace("Login")}>
+          <Text style={styles.loginLink}>Login</Text>
+        </TouchableOpacity>
+      )}
 
     </View>
   );
@@ -130,6 +140,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     color: "#000",
   },
+  loginLink: {
+    color: '#007BFF',
+    marginTop: 20,
+    textAlign: 'center',
+  },
+
 });
 
 export default RegisterScreen;

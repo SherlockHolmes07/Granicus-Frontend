@@ -1,16 +1,16 @@
-// screens/LoginScreen.js
-
 import React, { useState, useContext } from 'react';
-import { View, TextInput, Button } from 'react-native';
+import { View, TextInput, Button, TouchableOpacity, Text } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
 import { StyleSheet } from 'react-native';
 
-const LoginScreen = () => {
+const LoginScreen = ({ navigation }) => {
     const [mobileNumber, setMobileNumber] = useState('');
     const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
     const { login } = useContext(AuthContext);
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         // Mobile number validation
         const mobileNumberPattern = /^(\+\d{1,3}[- ]?)?\d{10}$/;
         if (!mobileNumberPattern.test(mobileNumber)) {
@@ -21,14 +21,26 @@ const LoginScreen = () => {
             alert('Please enter your password');
             return;
         }
-        login(mobileNumber, password);
+        setIsLoading(true);
+        try {
+            await login({mobileNumber, password});
+        } catch (error) {
+            // handle error
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
         <View style={styles.container}>
             <TextInput placeholder="Mobile Number" onChangeText={setMobileNumber} style={styles.input}/>
             <TextInput placeholder="Password" onChangeText={setPassword} secureTextEntry style={styles.input}/>
-            <Button title="Login" onPress={handleSubmit} />
+            <Button title="Login" onPress={handleSubmit} disabled={isLoading} />
+            
+            <TouchableOpacity onPress={() => navigation.replace('Register')}>
+                <Text style={styles.registerLink}>Register</Text>
+            </TouchableOpacity>
+            
         </View>
     );
 };
@@ -45,7 +57,12 @@ const styles = StyleSheet.create({
       padding: 8,
       backgroundColor: '#fff',
       color: '#000',
-    }
+    },
+    registerLink: {
+        color: '#007BFF',
+        marginTop: 20,
+        textAlign: 'center',
+    },
 });
   
 
