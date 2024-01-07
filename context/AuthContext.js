@@ -4,28 +4,27 @@ import * as SecureStore from 'expo-secure-store';
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-    const [token, setToken] = useState(null);
+    const [authState, setAuthState] = useState({
+        token: null,
+        userId: null
+    });
 
     useEffect(() => {
         const bootstrapAsync = async () => {
-          let userToken;
-    
-          try {
-            userToken = await SecureStore.getItemAsync('token');
-            console.log("token read succesfully", userToken);
-          } catch (e) {
-            // Restoring token failed
-            console.log("token read", e);
-          }
-    
-          // After restoring token, we may need to validate it in production apps
-          // validateToken(userToken);
-          setToken(userToken);
+            let userToken;
+            let userId;
+            try {
+                userToken = await SecureStore.getItemAsync('token');
+                userId = await SecureStore.getItemAsync('userId');
+                console.log("Token read successfully", userToken);
+            } catch (e) {
+                console.log("Token read failed", e);
+            }
+            setAuthState({ token: userToken, userId: userId });
         };
     
         bootstrapAsync();
     }, []);
-
 
     const callOTP = async (mobileNumber) => {
         console.log(mobileNumber);
@@ -71,9 +70,9 @@ export const AuthProvider = ({ children }) => {
             }
             const data = await response.json();
             console.log('Success:', data);
-            const token = data.token;
-            setToken(token);
-            await SecureStore.setItemAsync('token', token);    
+            setAuthState({ token: data.token, userId: data.userId });
+            await SecureStore.setItemAsync('token', data.token);
+            await SecureStore.setItemAsync('userId', data.userId.toString()); // Store userId
         } catch (error) {
             console.log("error", error)
         }
@@ -100,10 +99,9 @@ export const AuthProvider = ({ children }) => {
             }
             const data = await response.json();
             console.log('Success:', data);
-            const token = data.token;
-            setToken(token);
-            await SecureStore.setItemAsync('token', token);
-    
+            setAuthState({ token: data.token, userId: data.userId });
+            await SecureStore.setItemAsync('token', data.token);
+            await SecureStore.setItemAsync('userId', data.userId.toString());
         } catch (error) {
             console.log('Error:', error);
         }
@@ -111,13 +109,14 @@ export const AuthProvider = ({ children }) => {
 
     const logout = async () => {
         // Clear the token from the state and secure storage
-        setToken(null);
+        setAuthState({ token: null, userId: null });
         await SecureStore.deleteItemAsync('token');
-        
+        await SecureStore.deleteItemAsync('userId');
     };
 
+
     return (
-        <AuthContext.Provider value={{ token, login, register, logout, callOTP }}>
+        <AuthContext.Provider value={{ ...authState, login, register, logout, callOTP }}>
             {children}
         </AuthContext.Provider>
     );
