@@ -38,9 +38,12 @@ const HomeScreen = () => {
     sect: "",
     subCaste: "",
   });
-  const [siblingNames, setSiblingNames] = useState(userInfo?.siblingNames || []);
+  const [siblingNames, setSiblingNames] = useState(
+    userInfo?.siblingNames || []
+  );
   const [dateOfBirth, setDateOfBirth] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [isSaving, setIsSaving] = useState(false); // New state to track saving process
 
   const onDateChange = (event, selectedDate) => {
     setShowDatePicker(false); // Hide picker after selection
@@ -75,17 +78,39 @@ const HomeScreen = () => {
     setIsEditable(!isEditable);
   };
 
-  const handleSave = () => {
-    // Logic to save the editableUserInfo to the backend
-    setIsEditable(false);
-    const filteredSiblings = siblingNames.filter(
-      (name) => name && name !== "N/A"
-    );
-    setSiblingNames(filteredSiblings.length > 0 ? filteredSiblings : ["N/A"]);
+  const handleSave = async () => {
+    setIsSaving(true); // Disable the buttons by setting isSaving to true
+    try {
+      const response = await fetch(`http://192.168.29.12:3000/profile/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          userId: userId,
+          ...editableUserInfo,
+          dateOfBirth: dateOfBirth.toISOString().split("T")[0],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("Profile saved successfully:", result);
+      setUserInfo(result);
+    } catch (error) {
+      console.error("Saving profile failed:", error);
+    } finally {
+      setIsSaving(false); // Re-enable the buttons whether the API call succeeded or failed
+      setIsEditable(false); // Disable editing mode
+    }
   };
 
   const handleChange = (name, value) => {
-    setEditableUserInfo((prev) => ({ ...prev, [name]: value }));
+    setEditableUserInfo((prev) => ({ ...prev, [name]: String(value) }));
   };
 
   useEffect(() => {
@@ -112,7 +137,7 @@ const HomeScreen = () => {
           setDateOfBirth(new Date(data.dateOfBirth)); // Set the dateOfBirth here
           setEditableUserInfo({ ...data }); // Create a new object for editableUserInfo
           setSiblingNames(data.siblingNames || []); // Initialize siblingNames with fetched data
-        }  
+        }
       } catch (error) {
         console.log(error);
       }
@@ -126,307 +151,380 @@ const HomeScreen = () => {
     const date = new Date(dateString);
     return date.toLocaleDateString();
   };
- 
 
   return (
     <View style={{ flex: 1 }}>
-     { userInfo &&
-      (<ScrollView style={styles.container}>
-        {/* Repeat for other fields... */}
+      {userInfo && (
+        <ScrollView style={styles.container}>
+          {/* Repeat for other fields... */}
 
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Alternate Phone: </Text>
-          <TextInput
-            style={[styles.value, !isEditable && styles.notEditable]}
-            value={editableUserInfo.alternatePhoneNumber === null ? 'NA' : String(editableUserInfo.alternatePhoneNumber)} 
-            onChangeText={(text) => handleChange("alternatePhoneNumber", text)}
-            editable={isEditable}
-            keyboardType="phone-pad"
-            maxLength={10}
-          />
-        </View>
-        <View style={styles.separator} />
-
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Country: </Text>
-          <TextInput
-            style={[styles.value, !isEditable && styles.notEditable]}
-            value={editableUserInfo.country === null ? 'NA' : String(editableUserInfo.country)}
-            onChangeText={(text) => handleChange("country", text)}
-            editable={isEditable}
-          />
-        </View>
-        <View style={styles.separator} />
-        
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>State: </Text>
-          <TextInput
-            style={[styles.value, !isEditable && styles.notEditable]}
-            value={editableUserInfo.state === null ? 'NA' : String(editableUserInfo.state)}
-            onChangeText={(text) => handleChange("state", text)}
-            editable={isEditable}
-          />
-        </View>
-        <View style={styles.separator} />
-
-
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>City: </Text>
-          <TextInput
-            style={[styles.value, !isEditable && styles.notEditable]}
-            value={editableUserInfo.city === null ? 'NA' : String(editableUserInfo.city)}
-            onChangeText={(text) => handleChange("city", text)}
-            editable={isEditable}
-          />
-        </View>
-
-        <View style={styles.separator} />
-
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>District: </Text>
-          <TextInput
-            style={[styles.value, !isEditable && styles.notEditable]}
-            value={editableUserInfo.district === null ? 'NA' : String(editableUserInfo.district)}
-            onChangeText={(text) => handleChange("district", text)}
-            editable={isEditable}
-          />
-        </View>
-
-        <View style={styles.separator} />
-
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Pincode: </Text>
-          <TextInput
-            style={[styles.value, !isEditable && styles.notEditable]}
-            value={editableUserInfo.pincode === null ? 'NA' : String(editableUserInfo.pincode)}
-            onChangeText={(text) => handleChange("pincode", text)}
-            editable={isEditable}
-            keyboardType="number-pad"
-            maxLength={6}
-          />
-        </View>
-
-        <View style={styles.separator} />
-
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Date of Birth:</Text>
-          {isEditable ? (
-            <TouchableOpacity
-              onPress={ShowDatePicker}
-              style={styles.datePickerButton}
-            >
-              <Text style={styles.datePickerButtonText}>
-                {formatDate(dateOfBirth)}
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <Text style={[styles.value, !isEditable && styles.notEditable]}>
-              {formatDate(editableUserInfo.dateOfBirth)}
-            </Text>
-          )}
-          {showDatePicker && (
-            <DateTimePicker
-              value={dateOfBirth}
-              mode="date"
-              display="default"
-              onChange={onDateChange}
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Alternate Phone: </Text>
+            <TextInput
+              style={[styles.value, !isEditable && styles.notEditable]}
+              value={
+                editableUserInfo.alternatePhoneNumber === null
+                  ? "NA"
+                  : String(editableUserInfo.alternatePhoneNumber)
+              }
+              onChangeText={(text) =>
+                handleChange("alternatePhoneNumber", text)
+              }
+              editable={isEditable}
+              keyboardType="phone-pad"
+              maxLength={10}
             />
-          )}
-        </View>
+          </View>
+          <View style={styles.separator} />
 
-        <View style={styles.separator} />
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Country: </Text>
+            <TextInput
+              style={[styles.value, !isEditable && styles.notEditable]}
+              value={
+                editableUserInfo.country === null
+                  ? "NA"
+                  : String(editableUserInfo.country)
+              }
+              onChangeText={(text) => handleChange("country", text)}
+              editable={isEditable}
+            />
+          </View>
+          <View style={styles.separator} />
 
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Father's Name:</Text>
-          <TextInput
-            style={[styles.value, !isEditable && styles.notEditable]}
-            value={editableUserInfo.fathersName === null ? 'NA' : String(editableUserInfo.fathersName)}
-            onChangeText={(text) => handleChange("fathersName", text)}
-            editable={isEditable}
-          />
-        </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>State: </Text>
+            <TextInput
+              style={[styles.value, !isEditable && styles.notEditable]}
+              value={
+                editableUserInfo.state === null
+                  ? "NA"
+                  : String(editableUserInfo.state)
+              }
+              onChangeText={(text) => handleChange("state", text)}
+              editable={isEditable}
+            />
+          </View>
+          <View style={styles.separator} />
 
-        <View style={styles.separator} />
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>City: </Text>
+            <TextInput
+              style={[styles.value, !isEditable && styles.notEditable]}
+              value={
+                editableUserInfo.city === null
+                  ? "NA"
+                  : String(editableUserInfo.city)
+              }
+              onChangeText={(text) => handleChange("city", text)}
+              editable={isEditable}
+            />
+          </View>
 
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Mother's Name:</Text>
-          <TextInput
-            style={[styles.value, !isEditable && styles.notEditable]}
-            value={editableUserInfo.mothersName === null ? 'NA' : String(editableUserInfo.mothersName)}
-            onChange={(text) => handleChange("mothersName", text)}
-            editable={isEditable}
-          />
-        </View>
+          <View style={styles.separator} />
 
-        <View style={styles.separator} />
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>District: </Text>
+            <TextInput
+              style={[styles.value, !isEditable && styles.notEditable]}
+              value={
+                editableUserInfo.district === null
+                  ? "NA"
+                  : String(editableUserInfo.district)
+              }
+              onChangeText={(text) => handleChange("district", text)}
+              editable={isEditable}
+            />
+          </View>
 
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Spouse Name:</Text>
-          <TextInput
-            style={[styles.value, !isEditable && styles.notEditable]}
-            value={editableUserInfo.spouseName === null ? 'NA' : String(editableUserInfo.spouseName)}
-            onChange={(text) => handleChange("spouseName", text)}
-            editable={isEditable}
-          />
-        </View>
+          <View style={styles.separator} />
 
-        <View style={styles.separator} />
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Pincode: </Text>
+            <TextInput
+              style={[styles.value, !isEditable && styles.notEditable]}
+              value={
+                editableUserInfo.pincode === null
+                  ? "NA"
+                  : String(editableUserInfo.pincode)
+              }
+              onChangeText={(text) => handleChange("pincode", text)}
+              editable={isEditable}
+              keyboardType="number-pad"
+              maxLength={6}
+            />
+          </View>
 
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Spouse Phone:</Text>
-          <TextInput
-            style={[styles.value, !isEditable && styles.notEditable]}
-            value={editableUserInfo.spousePhoneNumber === null ? 'NA' : String(editableUserInfo.spousePhoneNumber)}
-            onChange={(text) => handleChange("spousePhoneNumber", text)}
-            editable={isEditable}
-            keyboardType="phone-pad"
-            maxLength={10}
-          />
-        </View>
+          <View style={styles.separator} />
 
-        <View style={styles.separator} />
-
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Number of Brothers:</Text>
-          <TextInput
-            style={[styles.value, !isEditable && styles.notEditable]}
-            value={editableUserInfo.numberOfBrothers === null ? 'NA' : String(editableUserInfo.numberOfBrothers)}
-            onChange={(text) => handleChange("numberOfBrothers", text)}
-            editable={isEditable}
-            keyboardType="number-pad"
-            maxLength={2}
-          />
-        </View>
-
-        <View style={styles.separator} />
-
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Number of Sisters:</Text>
-          <TextInput
-            style={[styles.value, !isEditable && styles.notEditable]}
-            // if numberOfSisters is NULL, show N/A
-            value={editableUserInfo.numberOfSisters === null ? 'NA' : String(editableUserInfo.numberOfSisters)}
-            onChange={(text) => handleChange("numberOfSisters", text)}
-            editable={isEditable}
-            keyboardType="number-pad"
-            maxLength={2}
-          />
-        </View>
-
-        <View style={styles.separator} />
-
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Siblings:</Text>
-          <View style={styles.siblingContainer}>
-            {siblingNames.map((name, index) => (
-              <View key={`sibling-${index}`} style={styles.siblingField}>
-                <TextInput
-                  style={[
-                    styles.value,
-                    styles.siblingInput,
-                    !isEditable && styles.notEditable,
-                  ]}
-                  value={name}
-                  onChangeText={(text) => updateSiblingName(index, text)}
-                  editable={isEditable}
-                  placeholder="Enter sibling's name"
-                />
-                {isEditable && (
-                  <TouchableOpacity
-                    onPress={() => removeSiblingField(index)}
-                    style={styles.removeButton}
-                  >
-                    <FontAwesome name="remove" size={24} color="red" />
-                  </TouchableOpacity>
-                )}
-              </View>
-            ))}
-            {isEditable && (
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Date of Birth:</Text>
+            {isEditable ? (
               <TouchableOpacity
-                onPress={addSiblingField}
-                style={styles.addButton}
+                onPress={ShowDatePicker}
+                style={styles.datePickerButton}
               >
-                <FontAwesome name="plus" size={24} color="blue" />
+                <Text style={styles.datePickerButtonText}>
+                  {formatDate(dateOfBirth)}
+                </Text>
               </TouchableOpacity>
+            ) : (
+              <Text style={[styles.value, !isEditable && styles.notEditable]}>
+                {formatDate(editableUserInfo.dateOfBirth)}
+              </Text>
+            )}
+            {showDatePicker && (
+              <DateTimePicker
+                value={dateOfBirth}
+                mode="date"
+                display="default"
+                onChange={onDateChange}
+              />
             )}
           </View>
-        </View>
 
-        <View style={styles.separator} />
+          <View style={styles.separator} />
 
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Native City:</Text>
-          <TextInput
-            style={[styles.value, !isEditable && styles.notEditable]}
-            value={editableUserInfo.nativeCity === null ? 'NA' : String(editableUserInfo.nativeCity)}
-            onChange={(text) => handleChange("nativeCity", text)}
-            editable={isEditable}
-          />
-        </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Father's Name:</Text>
+            <TextInput
+              style={[styles.value, !isEditable && styles.notEditable]}
+              value={
+                editableUserInfo.fathersName === null
+                  ? "NA"
+                  : String(editableUserInfo.fathersName)
+              }
+              onChangeText={(text) => handleChange("fathersName", text)}
+              editable={isEditable}
+            />
+          </View>
 
-        <View style={styles.separator} />
+          <View style={styles.separator} />
 
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Native District:</Text>
-          <TextInput
-            style={[styles.value, !isEditable && styles.notEditable]}
-            value={editableUserInfo.nativeDistrict === null ? 'NA' : String(editableUserInfo.nativeDistrict)}
-            onChange={(text) => handleChange("nativeDistrict", text)}
-            editable={isEditable}
-          />
-        </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Mother's Name:</Text>
+            <TextInput
+              style={[styles.value, !isEditable && styles.notEditable]}
+              value={
+                editableUserInfo.mothersName === null
+                  ? "NA"
+                  : String(editableUserInfo.mothersName)
+              }
+              onChangeText={(text) => handleChange("mothersName", text)}
+              editable={isEditable}
+            />
+          </View>
 
-        <View style={styles.separator} />
+          <View style={styles.separator} />
 
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Native State:</Text>
-          <TextInput
-            style={[styles.value, !isEditable && styles.notEditable]}
-            value={editableUserInfo.nativeState === null ? 'NA' : String(editableUserInfo.nativeState)}
-            onChange={(text) => handleChange("nativeState", text)}
-            editable={isEditable}
-          />
-        </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Spouse Name:</Text>
+            <TextInput
+              style={[styles.value, !isEditable && styles.notEditable]}
+              value={
+                editableUserInfo.spouseName === null
+                  ? "NA"
+                  : String(editableUserInfo.spouseName)
+              }
+              onChangeText={(text) => handleChange("spouseName", text)}
+              editable={isEditable}
+            />
+          </View>
 
-        <View style={styles.separator} />
+          <View style={styles.separator} />
 
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Sect:</Text>
-          <TextInput
-            style={[styles.value, !isEditable && styles.notEditable]}
-            value={editableUserInfo.sect === null ? 'NA' : String(editableUserInfo.sect)}
-            onChange={(text) => handleChange("sect", text)}
-            editable={isEditable}
-          />
-        </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Spouse Phone:</Text>
+            <TextInput
+              style={[styles.value, !isEditable && styles.notEditable]}
+              value={
+                editableUserInfo.spousePhoneNumber === null
+                  ? "NA"
+                  : String(editableUserInfo.spousePhoneNumber)
+              }
+              onChangeText={(text) => handleChange("spousePhoneNumber", text)}
+              editable={isEditable}
+              keyboardType="phone-pad"
+              maxLength={10}
+            />
+          </View>
 
-        <View style={styles.separator} />
+          <View style={styles.separator} />
 
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Subcaste:</Text>
-          <TextInput
-            style={[styles.value, !isEditable && styles.notEditable]}
-            value={editableUserInfo.subCaste === null ? 'NA' : String(editableUserInfo.subCaste)}
-            onChange={(text) => handleChange("subCaste", text)}
-            editable={isEditable}
-          />
-        </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Number of Brothers:</Text>
+            <TextInput
+              style={[styles.value, !isEditable && styles.notEditable]}
+              value={
+                editableUserInfo.numberOfBrothers === null
+                  ? "NA"
+                  : String(editableUserInfo.numberOfBrothers)
+              }
+              onChangeText={(text) => handleChange("numberOfBrothers", text)}
+              editable={isEditable}
+              keyboardType="number-pad"
+              maxLength={2}
+            />
+          </View>
 
-        <View style={styles.separator} />
+          <View style={styles.separator} />
 
-        {/* ... Add other fields as needed */}
-        <View style={styles.buttonContainer}>
-          {isEditable ? (
-            <>
-              <Button title="Save" onPress={handleSave} />
-              <Button title="Cancel" onPress={toggleEdit} color="#6c757d" />
-            </>
-          ) : (
-            <Button title="Edit" onPress={toggleEdit} />
-          )}
-        </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Number of Sisters:</Text>
+            <TextInput
+              style={[styles.value, !isEditable && styles.notEditable]}
+              // if numberOfSisters is NULL, show N/A
+              value={
+                editableUserInfo.numberOfSisters === null
+                  ? "NA"
+                  : String(editableUserInfo.numberOfSisters)
+              }
+              onChangeText={(text) => handleChange("numberOfSisters", text)}
+              editable={isEditable}
+              keyboardType="number-pad"
+              maxLength={2}
+            />
+          </View>
 
-      </ScrollView>)}
+          <View style={styles.separator} />
+
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Siblings:</Text>
+            <View style={styles.siblingContainer}>
+              {siblingNames.map((name, index) => (
+                <View key={`sibling-${index}`} style={styles.siblingField}>
+                  <TextInput
+                    style={[
+                      styles.value,
+                      styles.siblingInput,
+                      !isEditable && styles.notEditable,
+                    ]}
+                    value={name}
+                    onChangeText={(text) => updateSiblingName(index, text)}
+                    editable={isEditable}
+                    placeholder="Enter sibling's name"
+                  />
+                  {isEditable && (
+                    <TouchableOpacity
+                      onPress={() => removeSiblingField(index)}
+                      style={styles.removeButton}
+                    >
+                      <FontAwesome name="remove" size={24} color="red" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+              {isEditable && (
+                <TouchableOpacity
+                  onPress={addSiblingField}
+                  style={styles.addButton}
+                >
+                  <FontAwesome name="plus" size={24} color="blue" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.separator} />
+
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Native City:</Text>
+            <TextInput
+              style={[styles.value, !isEditable && styles.notEditable]}
+              value={
+                editableUserInfo.nativeCity === null
+                  ? "NA"
+                  : String(editableUserInfo.nativeCity)
+              }
+              onChangeText={(text) => handleChange("nativeCity", text)}
+              editable={isEditable}
+            />
+          </View>
+
+          <View style={styles.separator} />
+
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Native District:</Text>
+            <TextInput
+              style={[styles.value, !isEditable && styles.notEditable]}
+              value={
+                editableUserInfo.nativeDistrict === null
+                  ? "NA"
+                  : String(editableUserInfo.nativeDistrict)
+              }
+              onChangeText={(text) => handleChange("nativeDistrict", text)}
+              editable={isEditable}
+            />
+          </View>
+
+          <View style={styles.separator} />
+
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Native State:</Text>
+            <TextInput
+              style={[styles.value, !isEditable && styles.notEditable]}
+              value={
+                editableUserInfo.nativeState === null
+                  ? "NA"
+                  : String(editableUserInfo.nativeState)
+              }
+              onChangeText={(text) => handleChange("nativeState", text)}
+              editable={isEditable}
+            />
+          </View>
+
+          <View style={styles.separator} />
+
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Sect:</Text>
+            <TextInput
+              style={[styles.value, !isEditable && styles.notEditable]}
+              value={
+                editableUserInfo.sect === null
+                  ? "NA"
+                  : String(editableUserInfo.sect)
+              }
+              onChangeText={(text) => handleChange("sect", text)}
+              editable={isEditable}
+            />
+          </View>
+
+          <View style={styles.separator} />
+
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Subcaste:</Text>
+            <TextInput
+              style={[styles.value, !isEditable && styles.notEditable]}
+              value={
+                editableUserInfo.subCaste === null
+                  ? "NA"
+                  : String(editableUserInfo.subCaste)
+              }
+              onChangeText={(text) => handleChange("subCaste", text)}
+              editable={isEditable}
+            />
+          </View>
+
+          <View style={styles.separator} />
+
+          {/* ... Add other fields as needed */}
+          <View style={styles.buttonContainer}>
+            {isEditable ? (
+              <>
+                <Button title="Save" onPress={handleSave} disabled={isSaving} />
+                <Button
+                  title="Cancel"
+                  onPress={toggleEdit}
+                  color="#6c757d"
+                  disabled={isSaving}
+                />
+              </>
+            ) : (
+              <Button title="Edit" onPress={toggleEdit} />
+            )}
+          </View>
+        </ScrollView>
+      )}
 
       <Button title="Logout" onPress={logout} />
     </View>
@@ -498,8 +596,8 @@ const styles = StyleSheet.create({
   },
   datePickerButton: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderBottomWidth: 1,
     paddingVertical: 8,
   },
