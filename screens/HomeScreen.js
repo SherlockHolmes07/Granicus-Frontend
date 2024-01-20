@@ -133,10 +133,17 @@ const HomeScreen = () => {
         const data = await response.json();
         if (data) {
           console.log(data);
-          setUserInfo(data);
-          setDateOfBirth(new Date(data.dateOfBirth)); // Set the dateOfBirth here
-          setEditableUserInfo({ ...data }); // Create a new object for editableUserInfo
-          setSiblingNames(data.siblingNames || []); // Initialize siblingNames with fetched data
+          if(data.error) {
+            setUserInfo({});
+            setDateOfBirth(new Date());
+            setSiblingNames(data.siblingNames || []);
+          }
+          else{
+            setUserInfo(data);
+            setDateOfBirth(new Date(data.dateOfBirth)); // Set the dateOfBirth here
+            setEditableUserInfo(data); // Initialize editableUserInfo with fetched data           
+            setSiblingNames(data.siblingNames || []); // Initialize siblingNames with fetched data  
+          }
         }
       } catch (error) {
         console.log(error);
