@@ -10,7 +10,6 @@ const Stack = createStackNavigator();
 
 const App = () => {
   const { token } = useContext(AuthContext);
-
   return (
     <NavigationContainer>
       <Stack.Navigator>
