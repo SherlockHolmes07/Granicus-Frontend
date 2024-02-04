@@ -90,6 +90,7 @@ const HomeScreen = () => {
         body: JSON.stringify({
           userId: userId,
           ...editableUserInfo,
+          siblingNames: siblingNames,
           dateOfBirth: dateOfBirth.toISOString().split("T")[0],
         }),
       });
@@ -133,16 +134,15 @@ const HomeScreen = () => {
         const data = await response.json();
         if (data) {
           console.log(data);
-          if(data.error) {
+          if (data.error) {
             setUserInfo({});
             setDateOfBirth(new Date());
             setSiblingNames(data.siblingNames || []);
-          }
-          else{
+          } else {
             setUserInfo(data);
             setDateOfBirth(new Date(data.dateOfBirth)); // Set the dateOfBirth here
-            setEditableUserInfo(data); // Initialize editableUserInfo with fetched data           
-            setSiblingNames(data.siblingNames || []); // Initialize siblingNames with fetched data  
+            setEditableUserInfo(data); // Initialize editableUserInfo with fetched data
+            setSiblingNames(data.siblingNames || []); // Initialize siblingNames with fetched data
           }
         }
       } catch (error) {
